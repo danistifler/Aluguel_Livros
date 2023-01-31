@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace DevIO.Infra.Data.Repository
 {
-    public class EnderecoRepository : Repository<Endereco>, IEndrecoRepository
+    public class EnderecoRepository : Repository<Endereco>, IEnderecoRepository
     {
         public async Task<Endereco> ObterEnderecoPorFornecedor(Guid fornecedorId)
         {

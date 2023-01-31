@@ -1,29 +1,31 @@
-﻿using DevIO.Business.Core.Services;
-using DevIO.Business.Models.Fornecedores.Validations;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using DevIO.Business.Core.Notificacoes;
+using DevIO.Business.Core.Services;
+using DevIO.Business.Models.Fornecedores.Validations;
 
 namespace DevIO.Business.Models.Fornecedores.Services
 {
-    public class FornecedorService : BaseServices, IFornecedorService
+    public class FornecedorService : BaseService, IFornecedorService
     {
-
         private readonly IFornecedorRepository _fornecedorRepository;
-        private readonly IEnderecoRepository _enderecorRepository;
+        private readonly IEnderecoRepository _enderecoRepository;
 
-        public FornecedorService(IFornecedorRepository fornecedorRepository, IEnderecoRepository enderecorRepository)
+        public FornecedorService(IFornecedorRepository fornecedorRepository, 
+                                 IEnderecoRepository enderecoRepository,
+                                 INotificador notificador) : base(notificador)
         {
             _fornecedorRepository = fornecedorRepository;
-            _enderecorRepository = enderecorRepository;
+            _enderecoRepository = enderecoRepository;
         }
 
         public async Task Adicionar(Fornecedor fornecedor)
         {
-            if (ExecutarValidacao(new FornecedorValidation(), fornecedor)
+            if (!ExecutarValidacao(new FornecedorValidation(), fornecedor)
                 || !ExecutarValidacao(new EnderecoValidation(), fornecedor.Endereco)) return;
+
+            if (await FornecedorExistente(fornecedor)) return;
 
             await _fornecedorRepository.Adicionar(fornecedor);
         }
@@ -34,20 +36,22 @@ namespace DevIO.Business.Models.Fornecedores.Services
 
             if (await FornecedorExistente(fornecedor)) return;
 
-
             await _fornecedorRepository.Atualizar(fornecedor);
         }
 
-
-        public async Task Remove(Guid id)
+        public async Task Remover(Guid id)
         {
             var fornecedor = await _fornecedorRepository.ObterFornecedorProdutosEndereco(id);
 
-            if (fornecedor.Produtos.Any()) return;
-
-            if(fornecedor.Endereco != null)
+            if (fornecedor.Produtos.Any())
             {
-                await _enderecorRepository.Remover(fornecedor.Endereco.Id);
+                Notificar("O fornecedor possui produtos cadastrados!");
+                return;
+            }
+
+            if (fornecedor.Endereco != null)
+            {
+                await _enderecoRepository.Remover(fornecedor.Endereco.Id);
             }
 
             await _fornecedorRepository.Remover(id);
@@ -57,19 +61,23 @@ namespace DevIO.Business.Models.Fornecedores.Services
         {
             if (!ExecutarValidacao(new EnderecoValidation(), endereco)) return;
 
-            await _enderecorRepository.Atualizar(endereco);
+            await _enderecoRepository.Atualizar(endereco);
         }
 
         private async Task<bool> FornecedorExistente(Fornecedor fornecedor)
         {
             var fornecedorAtual = await _fornecedorRepository.Buscar(f => f.Documento == fornecedor.Documento && f.Id != fornecedor.Id);
-            return fornecedorAtual.Any();
+
+            if (!fornecedorAtual.Any()) return false;
+
+            Notificar("Já existe um fornecedor com este documento infomado.");
+            return true;
         }
 
         public void Dispose()
         {
             _fornecedorRepository?.Dispose();
-            _enderecorRepository?.Dispose();
+            _enderecoRepository?.Dispose();
         }
     }
 }

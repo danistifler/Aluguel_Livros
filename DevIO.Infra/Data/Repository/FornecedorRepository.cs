@@ -8,7 +8,7 @@ using System.Data.Entity;
 
 namespace DevIO.Infra.Data.Repository
 {
-    internal class FornecedorRepository : Repository<Fornecedor>, IFornecedorRepository
+    public class FornecedorRepository : Repository<Fornecedor>, IFornecedorRepository
     {
         public async Task<Fornecedor> ObterFornecedorEndereco(Guid id)
         {
